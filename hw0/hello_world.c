@@ -16,6 +16,6 @@
 int main(int argc, char **argv) {
   int a = 0xCAFEF00D, b = 0x13AECEE2;
 
-  printf("The magic code is: %X\n", a + b);
+  printf("The magic code is: %s\n", "<xxxxx>");
   return EXIT_SUCCESS;
 }
