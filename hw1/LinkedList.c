@@ -262,7 +262,7 @@ bool LLIterator_Remove(LLIterator *iter,
 		free(list->head);
 		list->head = next;
 		list->head->prev = NULL;
-	} else if (iter->node == list->tail) {\
+	} else if (iter->node == list->tail) {
 		iter->node = iter->node->prev;
 		LinkedListNode *prev = list->tail->prev;
 		free(list->tail);
