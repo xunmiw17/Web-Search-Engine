@@ -82,7 +82,7 @@ void LinkedList_Push(LinkedList *list, LLPayload_t payload) {
 		ln->prev = NULL;
 		list->head->prev = ln;
 		list->head = ln;
-		list->num_elements = list->num_elements + 1;
+		list->num_elements++;
   }
 }
 
@@ -110,7 +110,7 @@ bool LinkedList_Pop(LinkedList *list, LLPayload_t *payload_ptr) {
 		LinkedListNode *next = list->head->next;
 		free(list->head);
 		list->head = next;
-		list->num_elements = list->num_elements - 1;
+		list->num_elements--;
 		list->head->prev = NULL;
   }
 
@@ -139,7 +139,7 @@ void LinkedList_Append(LinkedList *list, LLPayload_t payload) {
     ln->next = NULL;
     list->tail->next = ln;
     list->tail = ln;
-    list->num_elements = list->num_elements + 1;
+    list->num_elements++;
 	}
 }
 
@@ -218,7 +218,7 @@ bool LLIterator_Next(LLIterator *iter) {
   // you should move the iterator past the end of the list
 	iter->node = iter->node->next;
 
-  return (iter->node != NULL);  // you may need to change this return value
+  return LLIterator_IsValid(iter);  // you may need to change this return value
 }
 
 void LLIterator_Get(LLIterator *iter, LLPayload_t *payload) {
@@ -248,9 +248,8 @@ bool LLIterator_Remove(LLIterator *iter,
   // the iterator is pointing to, and also free any LinkedList
   // data structure element as appropriate.
 	LinkedList *list = iter->list;
-	int num_elements = list->num_elements;
 	payload_free_function(iter->node->payload);
-	if (num_elements == 1) {
+	if (list->num_elements == 1) {
 		free(iter->node);
 		iter->node = NULL;
 		list->head = list->tail = NULL;
@@ -258,15 +257,13 @@ bool LLIterator_Remove(LLIterator *iter,
 		return false;
 	} else if (iter->node == list->head) {
 		LLIterator_Next(iter);
-		LinkedListNode *next = list->head->next;
 		free(list->head);
-		list->head = next;
+    list->head = iter->node;
 		list->head->prev = NULL;
 	} else if (iter->node == list->tail) {
 		iter->node = iter->node->prev;
-		LinkedListNode *prev = list->tail->prev;
 		free(list->tail);
-		list->tail = prev;
+    list->tail = iter->node;
 		list->tail->next = NULL;
 	} else {
 		LinkedListNode *node = iter->node;
@@ -276,7 +273,7 @@ bool LLIterator_Remove(LLIterator *iter,
 		node->prev = node->next = NULL;
 		free(node);
 	}
-	list->num_elements = list->num_elements - 1;
+	list->num_elements--;
 
   return true;  // you may need to change this return value
 }
@@ -304,7 +301,7 @@ bool LinkedList_Slice(LinkedList *list, LLPayload_t *payload_ptr) {
 		free(list->tail);
 		list->tail = prev;
 		list->tail->next = NULL;
-		list->num_elements = list->num_elements - 1;
+		list->num_elements--;
 	}
 
   return true;  // you may need to change this return value
