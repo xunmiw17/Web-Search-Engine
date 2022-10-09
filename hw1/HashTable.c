@@ -26,6 +26,10 @@
 // factor has become too high.
 static void MaybeResize(HashTable *ht);
 
+// For the given linked list, find the key-value pair associated with the given
+// key. If found, return the pointer to the current node. Otherwise return null.
+static LLIterator* Find_Element(LinkedList *chain, HTKey_t keyToFind);
+
 int HashKeyToBucketNum(HashTable *ht, HTKey_t key) {
   return key % ht->num_buckets;
 }
@@ -117,8 +121,6 @@ int HashTable_NumElements(HashTable *table) {
   return table->num_elements;
 }
 
-// For the given linked list, find the key-value pair associated with the given
-// key. If found, return the pointer to the current node. Otherwise return null.
 static LLIterator* Find_Element(LinkedList *chain, HTKey_t keyToFind) {
   LLIterator *lli = LLIterator_Allocate(chain);
   while (LLIterator_IsValid(lli)) {
@@ -155,6 +157,7 @@ bool HashTable_Insert(HashTable *table,
 
   // Allocate space in the heap for the new key-value pair.
   HTKeyValue_t *kvToPut = (HTKeyValue_t *) malloc(sizeof(HTKeyValue_t));
+  Verify333(kvToPut != NULL);
   kvToPut->key = newkeyvalue.key;
   kvToPut->value = newkeyvalue.value;
 
