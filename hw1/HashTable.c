@@ -132,6 +132,7 @@ static LLIterator* Find_Element(LinkedList *chain, HTKey_t keyToFind) {
     }
     LLIterator_Next(lli);
   }
+  free(lli);
   return NULL;
 }
 
@@ -173,6 +174,7 @@ bool HashTable_Insert(HashTable *table,
     LLIterator_Get(lli, (LLPayload_t *) &kv);
     *oldkeyvalue = *kv;
     *kv = *kvToPut;
+    free(kvToPut);
     free(lli);
     return true;
   } else {
