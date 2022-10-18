@@ -11,6 +11,8 @@
 
 // Feature test macro for strtok_r (c.f., Linux Programming Interface p. 63)
 #define _XOPEN_SOURCE 600
+#define WORD_LIMIT 1024
+#define CHARACTER_LIMIT 10240
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,8 +27,12 @@
 
 //////////////////////////////////////////////////////////////////////////////
 // Helper function declarations, constants, etc
+
+// Give user information about the correct usage of the program.
 static void Usage(void);
 static void ProcessQueries(DocTable* dt, MemIndex* mi);
+// Reads a string from a given stream. Returns 0 if we reach end-of-file, otherwise
+// returns 1.
 static int GetNextLine(FILE* f, char** ret_str);
 
 
@@ -54,6 +60,85 @@ int main(int argc, char** argv) {
   // Note that you should make sure the fomatting of your
   // searchshell output exactly matches our solution binaries
   // to get full points on this part.
+
+  char* dir_path = argv[1];
+  printf("Indexing '%s'\n", dir_path);
+
+  DocTable* doc_table;
+  MemIndex* mem_index;
+
+  // Crawls the given directory and builds an index
+  if (!CrawlFileTree(dir_path, &doc_table, &mem_index)) {
+    Usage();
+  }
+
+  char* query;
+  char** words;
+  char* token;
+  char* saveptr;
+  int i;
+
+  while (1) {
+    int query_len = 0;
+
+    query = (char*) malloc(sizeof(char) * CHARACTER_LIMIT);
+    words = (char**) malloc(sizeof(char*) * WORD_LIMIT);
+
+    printf("enter query:\n");
+    int result = GetNextLine(stdin, &query);
+    // User terminates the program
+    if (result == 0) {
+      printf("shutting down...\n");
+      break;
+    }
+
+    // Converts all characteres of query into lowercase
+    i = 0;
+    while (query[i] != '\0') {
+      query[i] = tolower(query[i]);
+      i++;
+    }
+
+    // Splits the query into words
+    token = strtok_r(query, " ", &saveptr);
+    while (token != NULL) {
+      words[query_len] = token;
+      query_len++;
+      token = strtok_r(NULL, " ", &saveptr);
+    }
+
+    char *p = strchr(words[query_len - 1], '\n');
+    if (p)
+      *p = '\0';
+
+    // Processes the query
+    LinkedList* search_list = MemIndex_Search(mem_index, words, query_len);
+    if (search_list == NULL) {
+      continue;
+    }
+    LLIterator* ll_it = LLIterator_Allocate(search_list);
+    // Prints each of the search result, in order of rank from high to low
+    while (LLIterator_IsValid(ll_it)) {
+      SearchResult* search_result;
+      LLIterator_Get(ll_it, (LLPayload_t*) &search_result);
+      DocID_t doc_id = search_result->doc_id;
+      int rank = search_result->rank;
+
+      char* doc_name = DocTable_GetDocName(doc_table, doc_id);
+      printf("  %s (%d)\n", doc_name, rank);
+
+      LLIterator_Next(ll_it);
+    }
+    LLIterator_Free(ll_it);
+    free(query);
+    free(words);
+  }
+
+  // Free up allocated memory
+  DocTable_Free(doc_table);
+  MemIndex_Free(mem_index);
+  free(query);
+  free(words);
   return EXIT_SUCCESS;
 }
 
@@ -73,5 +158,9 @@ static void ProcessQueries(DocTable* dt, MemIndex* mi) {
 }
 
 static int GetNextLine(FILE *f, char **ret_str) {
-  return -1;  // you may want to change this
+  char* buf = fgets(*ret_str, CHARACTER_LIMIT, f);
+  if (buf == NULL) {
+    return 0;
+  }
+  return 1;
 }
