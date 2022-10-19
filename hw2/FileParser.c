@@ -61,7 +61,7 @@ static void InsertContent(HashTable* tab, char* content);
 char* ReadFileToString(const char* file_name, int* size) {
   struct stat file_stat;
   char* buf;
-  int result, fd;
+  int fd;
   ssize_t num_read;
   size_t left_to_read;
 
@@ -110,8 +110,8 @@ char* ReadFileToString(const char* file_name, int* size) {
   // particular what the return values -1 and 0 imply.
   left_to_read = file_stat.st_size;
   while (left_to_read > 0) {
-    result = read(fd, buf, left_to_read);
-    if (result == -1) {
+    num_read = read(fd, buf, left_to_read);
+    if (num_read == -1) {
       if (errno != EINTR && errno != EAGAIN) {
         close(fd);
         perror("Read failed");
@@ -119,7 +119,7 @@ char* ReadFileToString(const char* file_name, int* size) {
       }
       continue;
     }
-    left_to_read -= result;
+    left_to_read -= num_read;
   }
 
   // Great, we're done!  We hit the end of the file and we read
@@ -273,6 +273,7 @@ static void AddWordPosition(HashTable* tab, char* word,
     wp = (WordPositions*) malloc(sizeof(WordPositions));
     Verify333(wp != NULL);
 
+    // Copy the given word
     char* word_copy = (char*) malloc(strlen(word) + 1);
     Verify333(word_copy != NULL);
     strcpy(word_copy, word);
@@ -283,6 +284,7 @@ static void AddWordPosition(HashTable* tab, char* word,
 
     LinkedList_Append(wp->positions, (LLPayload_t) (int64_t) pos);
 
+    // Insert the WordPositions structure into the hash table
     HTKeyValue_t kv;
     kv.key = hash_key;
     kv.value = (HTValue_t) wp;

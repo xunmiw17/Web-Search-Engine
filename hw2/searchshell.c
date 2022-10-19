@@ -30,7 +30,6 @@
 
 // Give user information about the correct usage of the program.
 static void Usage(void);
-static void ProcessQueries(DocTable* dt, MemIndex* mi);
 // Reads a string from a given stream. Returns 0 if we reach end-of-file, otherwise
 // returns 1.
 static int GetNextLine(FILE* f, char** ret_str);
@@ -114,6 +113,8 @@ int main(int argc, char** argv) {
     // Processes the query
     LinkedList* search_list = MemIndex_Search(mem_index, words, query_len);
     if (search_list == NULL) {
+      free(query);
+      free(words);
       continue;
     }
     LLIterator* ll_it = LLIterator_Allocate(search_list);
@@ -152,9 +153,6 @@ static void Usage(void) {
           "where <docroot> is an absolute or relative " \
           "path to a directory to build an index under.\n");
   exit(EXIT_FAILURE);
-}
-
-static void ProcessQueries(DocTable* dt, MemIndex* mi) {
 }
 
 static int GetNextLine(FILE *f, char **ret_str) {
