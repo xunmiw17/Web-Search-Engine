@@ -11,8 +11,8 @@
 
 // Feature test macro for strtok_r (c.f., Linux Programming Interface p. 63)
 #define _XOPEN_SOURCE 600
-#define WORD_LIMIT 1024
-#define CHARACTER_LIMIT 10240
+#define INITIAL_QUERY_CAPACITY 100
+#define INITIAL_WORD_CAPACITY 10
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,9 +30,6 @@
 
 // Give user information about the correct usage of the program.
 static void Usage(void);
-// Reads a string from a given stream. Returns 0 if we reach end-of-file, otherwise
-// returns 1.
-static int GetNextLine(FILE* f, char** ret_str);
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -79,16 +76,26 @@ int main(int argc, char** argv) {
 
   while (1) {
     int query_len = 0;
+    int query_capacity = INITIAL_QUERY_CAPACITY;
+    int word_capacity = INITIAL_WORD_CAPACITY;
 
-    query = (char*) malloc(sizeof(char) * CHARACTER_LIMIT);
-    words = (char**) malloc(sizeof(char*) * WORD_LIMIT);
+    // Allocates for the user provided query and divided words
+    query = (char*) malloc(sizeof(char) * query_capacity);
+    words = (char**) malloc(sizeof(char*) * word_capacity);
 
     printf("enter query:\n");
-    int result = GetNextLine(stdin, &query);
+    char* buf = fgets(query, query_capacity, stdin);
     // User terminates the program
-    if (result == 0) {
+    if (buf == NULL) {
       printf("shutting down...\n");
       break;
+    }
+    // Reads the whole query string that user entered
+    while (strchr(query, '\n') == NULL) {
+      size_t len = strlen(query);
+      query_capacity *= 2;
+      query = (char*) realloc(query, sizeof(char) * query_capacity);
+      fgets(query + len, query_capacity - len, stdin);
     }
 
     // Converts all characteres of query into lowercase
@@ -101,17 +108,25 @@ int main(int argc, char** argv) {
     // Splits the query into words
     token = strtok_r(query, " ", &saveptr);
     while (token != NULL) {
+      if (query_len == word_capacity) {
+        word_capacity *= 2;
+        words = (char**) realloc(words, sizeof(char*) * word_capacity);
+      }
       words[query_len] = token;
       query_len++;
       token = strtok_r(NULL, " ", &saveptr);
     }
 
+    // Terminates the user provided string
     char *p = strchr(words[query_len - 1], '\n');
-    if (p)
+    if (p != NULL) {
       *p = '\0';
+    }
 
     // Processes the query
     LinkedList* search_list = MemIndex_Search(mem_index, words, query_len);
+    // If the search result is empty, free the allocated memory and prompt the user
+    // to enter next query
     if (search_list == NULL) {
       free(query);
       free(words);
@@ -153,12 +168,4 @@ static void Usage(void) {
           "where <docroot> is an absolute or relative " \
           "path to a directory to build an index under.\n");
   exit(EXIT_FAILURE);
-}
-
-static int GetNextLine(FILE *f, char **ret_str) {
-  char* buf = fgets(*ret_str, CHARACTER_LIMIT, f);
-  if (buf == NULL) {
-    return 0;
-  }
-  return 1;
 }
