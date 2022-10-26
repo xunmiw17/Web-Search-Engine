@@ -74,13 +74,14 @@ DocID_t DocTable_Add(DocTable* table, char* doc_name) {
   // STEP 2.
   // Check to see if the document already exists.  Then make a copy of the
   // doc_name and allocate space for the new ID.
-  if (HashTable_Find(table->name_to_id, FNVHash64((unsigned char*) doc_name, strlen(doc_name)), &old_kv)) {
+  if (HashTable_Find(table->name_to_id,
+      FNVHash64((unsigned char*) doc_name, strlen(doc_name)), &old_kv)) {
     res = *((DocID_t*) old_kv.value);
     return res;
   }
   // Makes a copy of doc_name
   doc_copy = (char*) malloc(strlen(doc_name) + 1);
-  strcpy(doc_copy, doc_name);
+  snprintf(doc_copy, strlen(doc_name) + 1, "%s", doc_name);
   doc_id = (DocID_t*) malloc(sizeof(DocID_t));
 
   *doc_id = table->max_id;

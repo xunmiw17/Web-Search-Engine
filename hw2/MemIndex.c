@@ -182,7 +182,8 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
 
   key = FNVHash64((unsigned char*) query[0], strlen(query[0]));
 
-  // If the first word does not exist in the table, free the result list and return NULL.
+  // If the first word does not exist in the table, free the result list and
+  // return NULL.
   if (!HashTable_Find(index, key, &kv)) {
     LinkedList_Free(ret_list, &free);
     return NULL;
@@ -252,7 +253,6 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
     Verify333(ll_it != NULL);
     num_docs = LinkedList_NumElements(ret_list);
     for (j = 0; j < num_docs; j++) {
-
       SearchResult* result;
       LLIterator_Get(ll_it, (LLPayload_t*) &result);
       DocID_t docId = result->doc_id;

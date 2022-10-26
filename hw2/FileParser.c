@@ -276,7 +276,7 @@ static void AddWordPosition(HashTable* tab, char* word,
     // Copy the given word
     char* word_copy = (char*) malloc(strlen(word) + 1);
     Verify333(word_copy != NULL);
-    strcpy(word_copy, word);
+    snprintf(word_copy, strlen(word) + 1, "%s", word);
 
     wp->word = word_copy;
     wp->positions = LinkedList_Allocate();

@@ -125,8 +125,8 @@ int main(int argc, char** argv) {
 
     // Processes the query
     LinkedList* search_list = MemIndex_Search(mem_index, words, query_len);
-    // If the search result is empty, free the allocated memory and prompt the user
-    // to enter next query
+    // If the search result is empty, free the allocated memory and prompt the
+    // user to enter next query
     if (search_list == NULL) {
       free(query);
       free(words);
