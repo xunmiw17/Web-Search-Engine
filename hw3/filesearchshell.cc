@@ -11,16 +11,34 @@
 
 #include <cstdlib>    // for EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream>   // for std::cout, std::cerr, etc.
+#include <vector>
+#include <sstream>
+#include <list>
+#include <algorithm>
 
 #include "./QueryProcessor.h"
 
+using namespace hw3;
+
 using std::cerr;
 using std::endl;
+using std::cout;
+using std::cin;
+using std::string;
+using std::vector;
+using std::list;
+using std::stringstream;
+
 
 // Error usage message for the client to see
 // Arguments:
 // - prog_name: Name of the program
 static void Usage(char* prog_name);
+
+// Print the query result
+// Arguments:
+// - qr: The query result
+static void PrintQueryResult(const QueryProcessor::QueryResult& qr);
 
 // Your job is to implement the entire filesearchshell.cc
 // functionality. We're essentially giving you a blank screen to work
@@ -83,10 +101,51 @@ int main(int argc, char** argv) {
     Usage(argv[0]);
   }
 
+  // Get the user provided index file names
+  list<string> index_list;
+  for (int i = 1; i < argc; i++) {
+    index_list.push_back(argv[i]);
+  }
+
+  // Used to process query
+  QueryProcessor qp(index_list);
+
   // STEP 1:
   // Implement filesearchshell!
   // Probably want to write some helper methods ...
-  while (1) { }
+  while (1) {
+    vector<string> query;
+    string line;
+    string word;
+
+    // Read the user input
+    cout << "Enter query:" << endl;
+    getline(cin, line);
+
+    // User quits the program
+    if (cin.eof()) {
+      break;
+    }
+
+    // Process the user input. Read white-space separated words
+    stringstream ss;
+    ss << line;
+    while (ss >> word) {
+      // Convert the word to lowercase
+      for (auto &c : word) {
+        c = tolower(c);
+      }
+      query.push_back(word);
+    }
+
+    // Process the query and get the query result, print them
+    vector<QueryProcessor::QueryResult> result = qp.ProcessQuery(query);
+    if (result.size() == 0) {
+      cout << "  [no results]" << endl;
+    } else {
+      for_each(result.begin(), result.end(), &PrintQueryResult);
+    }
+  }
 
   return EXIT_SUCCESS;
 }
@@ -94,4 +153,8 @@ int main(int argc, char** argv) {
 static void Usage(char* prog_name) {
   cerr << "Usage: " << prog_name << " [index files+]" << endl;
   exit(EXIT_FAILURE);
+}
+
+static void PrintQueryResult(const QueryProcessor::QueryResult& qr) {
+  cout << "  " << qr.document_name << " (" << qr.rank << ")" << endl;
 }

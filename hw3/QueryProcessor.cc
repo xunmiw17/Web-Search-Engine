@@ -79,7 +79,107 @@ QueryProcessor::ProcessQuery(const vector<string>& query) const {
   // STEP 1.
   // (the only step in this file)
   vector<QueryProcessor::QueryResult> final_result;
+  vector<QueryProcessor::QueryResult> intermediate_result;
 
+  // For each index file given, compute the query result
+  for (int i = 0; i < array_len_; i++) {
+    DocTableReader* doc_table_reader = dtr_array_[i];
+    IndexTableReader* index_table_reader = itr_array_[i];
+
+    // Process the first word of the query
+    string first_word = query[0];
+    DocIDTableReader* doc_id_table_reader =
+                    index_table_reader->LookupWord(first_word);
+    // If the index file does not contain the first word, we are done with this
+    // index file and go to the next one
+    if (doc_id_table_reader == nullptr) {
+      continue;
+    }
+    // Get the documents which contain the word and produce the initial query
+    // result
+    list<DocIDElementHeader> doc_id_list = doc_id_table_reader->GetDocIDList();
+    delete doc_id_table_reader;
+    doc_id_table_reader = nullptr;
+
+    for (auto header : doc_id_list) {
+      DocID_t doc_id = header.doc_id;
+      int32_t num_pos = header.num_positions;
+      string doc_name;
+      bool lookup = doc_table_reader->LookupDocID(doc_id, &doc_name);
+      if (lookup) {
+        QueryResult result;
+        result.document_name = doc_name;
+        result.rank = num_pos;
+        intermediate_result.push_back(result);
+      }
+    }
+
+
+    if (query.size() > 1) {
+      bool nonexist = false;
+      // Process the remaining words.
+      for (vector<string>::size_type i = 1; i < query.size(); i++) {
+        string word = query[i];
+        doc_id_table_reader = index_table_reader->LookupWord(word);
+        // If the index file does not contain the word, go to the next index
+        // file
+        if (doc_id_table_reader == nullptr) {
+          nonexist = true;
+          break;
+        }
+        // Get the documents which contain the word and produce the initial
+        // query result
+        doc_id_list = doc_id_table_reader->GetDocIDList();
+        delete doc_id_table_reader;
+        doc_id_table_reader = nullptr;
+
+        // Iterate through the current result list. For each result, determine
+        // if the current word is contained in the corresponding document. If
+        // not, delete the result; otherwise increment the rank of it.
+        for (auto it = intermediate_result.begin();
+                  it < intermediate_result.end(); it++) {
+          auto result = *it;
+          bool has_match = false;
+          // Search for the document that matches
+          for (auto header : doc_id_list) {
+            DocID_t doc_id = header.doc_id;
+            string header_filename;
+            if (doc_table_reader->LookupDocID(doc_id, &header_filename)) {
+              // Found a match. Update the document's rank.
+              if (header_filename.compare(result.document_name) == 0) {
+                has_match = true;
+                QueryResult new_result;
+                new_result.rank = result.rank + header.num_positions;
+                new_result.document_name = result.document_name;
+                *it = new_result;
+                break;
+              }
+            }
+          }
+          // There's no match. Remove the document from the result list.
+          if (!has_match) {
+            intermediate_result.erase(it);
+            it--;
+          }
+        }
+      }
+
+      if (nonexist) {
+        continue;
+      }
+    }
+
+    // Push the intermediate result to the final result, and clear it
+    for (auto result : intermediate_result) {
+      final_result.push_back(result);
+    }
+    intermediate_result.clear();
+  }
+
+  // No word matches. Return an empty list.
+  if (final_result.empty()) {
+    return final_result;
+  }
 
   // Sort the final results.
   sort(final_result.begin(), final_result.end());
