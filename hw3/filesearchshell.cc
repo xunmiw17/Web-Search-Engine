@@ -18,8 +18,6 @@
 
 #include "./QueryProcessor.h"
 
-using namespace hw3;
-
 using std::cerr;
 using std::endl;
 using std::cout;
@@ -28,6 +26,7 @@ using std::string;
 using std::vector;
 using std::list;
 using std::stringstream;
+using hw3::QueryProcessor;
 
 
 // Error usage message for the client to see

@@ -389,7 +389,7 @@ static int WriteHTBucket(FILE* f, IndexFileOffset_t offset, LinkedList* li,
     // STEP 8.
     // Write the element itself, using fn.
     HTKeyValue_t *kv;
-    LLIterator_Get(it, (LLPayload_t*) &kv);
+    LLIterator_Get(it, reinterpret_cast<LLPayload_t*>(&kv));
     int elt_bytes = fn(f, element_pos, kv);
     if (elt_bytes == kFailedWrite) {
       return kFailedWrite;
@@ -417,7 +417,7 @@ static int WriteDocidToDocnameFn(FILE* f, IndexFileOffset_t offset,
                                  HTKeyValue_t* kv) {
   // STEP 9.
   // determine the file name length
-  int16_t file_name_bytes = strlen((char*) kv->value);
+  int16_t file_name_bytes = strlen(static_cast<char*>(kv->value));
 
 
   // fwrite() the docid from `kv`.  Remember to convert to
@@ -437,7 +437,7 @@ static int WriteDocidToDocnameFn(FILE* f, IndexFileOffset_t offset,
   // fwrite() the file name.  We don't write the null-terminator from the
   // string, just the characters, since we've already written a length
   // field for the string.
-  char* file_name = (char*) kv->value;
+  char* file_name = static_cast<char*>(kv->value);
   if (fwrite(file_name, file_name_bytes, 1, f) != 1) {
     return kFailedWrite;
   }
@@ -486,7 +486,7 @@ static int WriteDocIDToPositionListFn(FILE* f,
     // Get the next position from the list.
     // DocPositionOffset_t pos;
     // LLIterator_Get(it, (LLPayload_t*) &pos);
-    LLIterator_Get(it, (LLPayload_t*) &position);
+    LLIterator_Get(it, reinterpret_cast<LLPayload_t*>(&position));
 
 
     // STEP 14.
