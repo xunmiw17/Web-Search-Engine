@@ -20,6 +20,8 @@
 #include "./HttpUtils.h"
 #include "./HttpConnection.h"
 
+#define BUF_SIZE 1024
+
 using std::map;
 using std::string;
 using std::vector;
@@ -47,7 +49,40 @@ bool HttpConnection::GetNextRequest(HttpRequest* const request) {
   // next time the caller invokes GetNextRequest()!
 
   // STEP 1:
+  // If buffer_ does not contain "\r\n\r\n", read the request header
+  size_t pos = buffer_.find("\r\n\r\n");
+  if (pos == string::npos) {
+    int bytes_read;
+    unsigned char buf[BUF_SIZE];
+    while (1) {
+      bytes_read = WrappedRead(fd_, buf, BUF_SIZE);
+      if (bytes_read == -1) {
+        return false;
+      } else if (bytes_read == 0) {
+        break;
+      } else {
+        // Append the read bytes to buffer_
+        buffer_ += string(reinterpret_cast<char*>(buf), bytes_read);
+        pos = buffer_.find("\r\n\r\n");
+        if (pos != string::npos) {
+          // There is occurrence of "\r\n\r\n"!
+          break;
+        }
+      }
+    }
+  }
 
+  // The request header does not contain "\r\n\r\n"
+  if (pos == string::npos) {
+    return false;
+  }
+
+  // Store the parsed request into the output parameter
+  HttpRequest req = ParseRequest(buffer_.substr(0, pos + 4));
+  *request = req;
+
+  // Save anything after "\r\n\r\n" in buffer_
+  buffer_ = buffer_.substr(0, pos + 4);
 
   return false;  // You may want to change this.
 }
@@ -82,7 +117,26 @@ HttpRequest HttpConnection::ParseRequest(const string& request) const {
   // Note: If a header is malformed, skip that line.
 
   // STEP 2:
+  // Split the request into lines
+  vector<string> lines;
+  boost::split(lines, request, boost::is_any_of("\r\n"));
 
+  // Trim whitespace from the end of a line, for all lines
+  for (auto it = lines.begin(); it < lines.end(); it++) {
+    boost::trim_right(*it);
+  }
+
+  // Get the first line, extract the URI, and store it in req.URI
+  vector<string> toks;
+  boost::split(toks, lines[0], boost::is_any_of(" "));
+  req.set_uri(toks[1]);
+
+  // For the rest of the lines, extract the header name and value and store them
+  for (auto it = lines.begin(); it < lines.end(); it++) {
+    if (it != lines.begin()) {
+
+    }
+  }
 
   return req;
 }
