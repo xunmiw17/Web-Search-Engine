@@ -53,9 +53,23 @@ bool IsPathSafe(const string& root_dir, const string& test_file) {
   // path of a file.)
 
   // STEP 1
+  char dir_buf[PATH_MAX], file_buf[PATH_MAX];
+  char *dir_path = realpath(root_dir.c_str(), dir_buf);
+  if (dir_path == NULL) {
+    return false;
+  }
+  char *file_path = realpath(test_file.c_str(), file_buf);
+  if (file_path == NULL) {
+    return false;
+  }
+  if (strlen(dir_path) > strlen(file_path)) {
+    return false;
+  }
+  if (strncmp(dir_path, file_path, strlen(dir_path)) != 0) {
+    return false;
+  }
 
-
-  return true;  // You may want to change this.
+  return *(file_path + strlen(dir_path)) == '/';
 }
 
 string EscapeHtml(const string& from) {
@@ -69,7 +83,11 @@ string EscapeHtml(const string& from) {
   // looked up online.
 
   // STEP 2
-
+  boost::replace_all(ret, "&", "&amp;");
+  boost::replace_all(ret, "<", "&lt;");
+  boost::replace_all(ret, ">", "&gt;");
+  boost::replace_all(ret, "\"", "&quot;");
+  boost::replace_all(ret, "\'", "&apos;");
 
   return ret;
 }

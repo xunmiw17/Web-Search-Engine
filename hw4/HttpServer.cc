@@ -134,8 +134,24 @@ static void HttpServer_ThrFn(ThreadPool::Task* t) {
 
   // STEP 1:
   bool done = false;
+  HttpConnection hc(hst->client_fd);
   while (!done) {
-    done = true;  // you may want to change this value
+    HttpRequest req;
+    // Get and parse the next request
+    if (!hc.GetNextRequest(&req)) {
+      close(hst->client_fd);
+      done = true;
+    }
+    // Process the request and write the response
+    if (!hc.WriteResponse(ProcessRequest(req, hst->base_dir, *hst->indices))) {
+      close(hst->client_fd);
+      done = true;
+    }
+    // The client sends a "Connection: close\r\n" header. We're done
+    if (req.GetHeaderValue("connection").compare("close") == 0) {
+      close(hst->client_fd);
+      done = true;
+    }
   }
 }
 
@@ -181,7 +197,52 @@ static HttpResponse ProcessFileRequest(const string& uri,
   string file_name = "";
 
   // STEP 2:
+  // Parse the given uri and figure out the file name the user is asking for
+  URLParser parser;
+  parser.Parse(uri);
+  string path = parser.path();
+  path = path.substr(8);
+  file_name += path;
 
+  // Read the file content into memory
+  FileReader fr(base_dir, file_name);
+  string contents;
+  if (fr.ReadFile(&contents)) {
+    // Append the file content to response body
+    ret.AppendToBody(contents);
+    // Extract the suffix of the file name
+    size_t pos = file_name.rfind(".");
+    string suffix = file_name.substr(pos);
+
+    // Set appropriate content types based on the file name suffix
+    if (suffix.compare(".html") == 0 || suffix.compare(".htm") == 0) {
+      ret.set_content_type("text/html");
+    } else if (suffix.compare(".jpeg") == 0 || suffix.compare(".jpg") == 0) {
+      ret.set_content_type("image/jpeg");
+    } else if (suffix.compare(".png") == 0) {
+      ret.set_content_type("image/png");
+    } else if (suffix.compare(".txt") == 0) {
+      ret.set_content_type("text/plain");
+    } else if (suffix.compare(".js") == 0) {
+      ret.set_content_type("text/javascript");
+    } else if (suffix.compare(".css") == 0) {
+      ret.set_content_type("text/css");
+    } else if (suffix.compare(".xml") == 0) {
+      ret.set_content_type("application/xml");
+    } else if (suffix.compare(".gif") == 0) {
+      ret.set_content_type("image/gif");
+    } else if (suffix.compare(".csv") == 0) {
+      ret.set_content_type("text/csv");
+    } else {
+      ret.set_content_type("application/octet-stream");
+    }
+
+    // Set the response code, protocol, and message for the response
+    ret.set_response_code(200);
+    ret.set_protocol("HTTP/1.1");
+    ret.set_message("OK");
+    return ret;
+  }
 
   // If you couldn't find the file, return an HTTP 404 error.
   ret.set_protocol("HTTP/1.1");
@@ -219,6 +280,73 @@ static HttpResponse ProcessQueryRequest(const string& uri,
   //    tags!)
 
   // STEP 3:
+  // Append the 333gle webpage to the response body
+  ret.AppendToBody(string(kThreegleStr));
+
+  // If the user searches something, conduct the search and display search
+  // result
+  if (uri.find("query?") != string::npos) {
+    // Parse the uri to extract the user's query
+    URLParser parser;
+    parser.Parse(uri);
+    map<string, string> args = parser.args();
+    string query = args["terms"];
+    boost::trim(query);
+    boost::to_lower(query);
+
+    // Split the user's query into words
+    vector<string> words;
+    boost::split(words, query, boost::is_any_of("+"), boost::token_compress_on);
+
+    // Process the user's query and produces query results
+    hw3::QueryProcessor qp(indices);
+    vector<hw3::QueryProcessor::QueryResult> qrs = qp.ProcessQuery(words);
+
+    if (qrs.size() == 0) {
+      // No result found
+      ret.AppendToBody("<br>\n");
+      ret.AppendToBody("No results found for <b>");
+      ret.AppendToBody(EscapeHtml(query));
+      ret.AppendToBody("</b>\n");
+    } else {
+      // Display overview of search results
+      stringstream ss_overview;
+      ss_overview << "<br>\n";
+      ss_overview << qrs.size() << (qrs.size() == 1) ? " result " : " results ";
+      ss_overview << "found for <b>" << EscapeHtml(query) << "</b>\n";
+      // for (auto it = words.begin(); it < words.end(); it++) {
+      //   string word = *it;
+      //   ss_overview << "<b> " << word << "</b>";
+      // }
+      ret.AppendToBody(ss_overview.str());
+
+      // Display details of search result, including document names and ranks
+      ret.AppendToBody("<ul>\n");
+      for (auto it = qrs.begin(); it < qrs.end(); it++) {
+        hw3::QueryProcessor::QueryResult qr = *it;
+        stringstream ss;
+        ss << "<li><a href=\">";
+        if (qr.document_name.substr(0, 7).compare("http://") != 0) {
+          ss << "/static/";
+        }
+        ss << qr.document_name << "\">";
+        ss << EscapeHtml(qr.document_name) << "</a>";
+        ss << " [" << qr.rank << "]</li>\n";
+        ret.AppendToBody(ss.str());
+      }
+      ret.AppendToBody("</ul>\n");
+    }
+  }
+
+  // Write the end of body to response
+  ret.AppendToBody("</body>\n");
+  ret.AppendToBody("</html>\n");
+
+  // Set the response's content type, message, protocol, and response code
+  ret.set_content_type("text/html");
+  ret.set_message("OK");
+  ret.set_protocol("HTTP/1.1");
+  ret.set_response_code(200);
 
   return ret;
 }

@@ -82,9 +82,9 @@ bool HttpConnection::GetNextRequest(HttpRequest* const request) {
   *request = req;
 
   // Save anything after "\r\n\r\n" in buffer_
-  buffer_ = buffer_.substr(0, pos + 4);
+  buffer_ = buffer_.substr(pos + 4);
 
-  return false;  // You may want to change this.
+  return true;  // You may want to change this.
 }
 
 bool HttpConnection::WriteResponse(const HttpResponse& response) const {
@@ -119,7 +119,8 @@ HttpRequest HttpConnection::ParseRequest(const string& request) const {
   // STEP 2:
   // Split the request into lines
   vector<string> lines;
-  boost::split(lines, request, boost::is_any_of("\r\n"));
+  boost::split(lines, request, boost::is_any_of("\r\n"),
+               boost::token_compress_on);
 
   // Trim whitespace from the end of a line, for all lines
   for (auto it = lines.begin(); it < lines.end(); it++) {
@@ -128,13 +129,23 @@ HttpRequest HttpConnection::ParseRequest(const string& request) const {
 
   // Get the first line, extract the URI, and store it in req.URI
   vector<string> toks;
-  boost::split(toks, lines[0], boost::is_any_of(" "));
+  boost::split(toks, lines[0], boost::is_any_of(" "), boost::token_compress_on);
   req.set_uri(toks[1]);
 
   // For the rest of the lines, extract the header name and value and store them
   for (auto it = lines.begin(); it < lines.end(); it++) {
     if (it != lines.begin()) {
-
+      vector<string> header;
+      boost::split(header, *it, boost::is_any_of(": "),
+                   boost::token_compress_on);
+      // Skip the header if it's malformed
+      if (header.size() != 2) {
+        continue;
+      }
+      string name = header[0];
+      boost::to_lower(name);
+      string value = header[1];
+      req.AddHeader(name, value);
     }
   }
 
