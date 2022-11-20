@@ -23,6 +23,9 @@
 #include "./ServerSocket.h"
 #include "./HttpServer.h"
 
+#define PORT_MIN 1024
+#define PORT_MAX 49151
+
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -101,5 +104,39 @@ static void GetPortAndPath(int argc,
   // - You have at least 1 index, and all indices are readable files
 
   // STEP 1:
-}
+  // Check if the number of command line arguments is reasonable
+  if (argc < 4) {
+    Usage(argv[0]);
+    exit(EXIT_FAILURE);
+  }
 
+  // Extract the port number and see if it's reasonable
+  uint16_t c_port = atoi(argv[1]);
+  if (c_port < PORT_MIN || c_port > PORT_MAX) {
+    cerr << "Port number is not reasonable" << endl;
+    Usage(argv[0]);
+    exit(EXIT_FAILURE);
+  }
+  *port = c_port;
+
+  // Check if the path is a readable directory
+  struct stat dir_stat;
+  if (stat(argv[2], &dir_stat) == -1 || !S_ISDIR(dir_stat.st_mode)) {
+    cerr << "The path is not a readable directory" << endl;
+    Usage(argv[0]);
+    exit(EXIT_FAILURE);
+  }
+  *path = string(argv[2]);
+
+  // For each index file, check if it is a readable file
+  struct stat file_stat;
+  for (int i = 3; i < argc; i++) {
+    char* index = argv[i];
+    if (stat(index, &file_stat) == -1 || !S_ISREG(file_stat.st_mode)) {
+      cerr << "The index " << index << " is not a readable file" << endl;
+      Usage(argv[0]);
+      exit(EXIT_FAILURE);
+    }
+    indices->push_back(string(index));
+  }
+}

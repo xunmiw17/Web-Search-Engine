@@ -202,6 +202,16 @@ static HttpResponse ProcessFileRequest(const string& uri,
   parser.Parse(uri);
   string path = parser.path();
   path = path.substr(8);
+  // If the path is not under the base directory, return an error message
+  if (!IsPathSafe(base_dir, base_dir + "/" + path)) {
+    ret.set_protocol("HTTP/1.1");
+    ret.set_response_code(404);
+    ret.set_message("Not Found");
+    ret.AppendToBody("<html><body>The file \""
+                    + EscapeHtml(file_name)
+                    + "\" is not under the base directory</body></html>\n");
+    return ret;
+  }
   file_name += path;
 
   // Read the file content into memory
@@ -296,7 +306,7 @@ static HttpResponse ProcessQueryRequest(const string& uri,
 
     // Split the user's query into words
     vector<string> words;
-    boost::split(words, query, boost::is_any_of("+"), boost::token_compress_on);
+    boost::split(words, query, boost::is_any_of(" "), boost::token_compress_on);
 
     // Process the user's query and produces query results
     hw3::QueryProcessor qp(indices);
@@ -312,12 +322,13 @@ static HttpResponse ProcessQueryRequest(const string& uri,
       // Display overview of search results
       stringstream ss_overview;
       ss_overview << "<br>\n";
-      ss_overview << qrs.size() << (qrs.size() == 1) ? " result " : " results ";
+      ss_overview << qrs.size();
+      if (qrs.size() == 1) {
+        ss_overview << " result ";
+      } else {
+        ss_overview << " results ";
+      }
       ss_overview << "found for <b>" << EscapeHtml(query) << "</b>\n";
-      // for (auto it = words.begin(); it < words.end(); it++) {
-      //   string word = *it;
-      //   ss_overview << "<b> " << word << "</b>";
-      // }
       ret.AppendToBody(ss_overview.str());
 
       // Display details of search result, including document names and ranks
@@ -325,7 +336,7 @@ static HttpResponse ProcessQueryRequest(const string& uri,
       for (auto it = qrs.begin(); it < qrs.end(); it++) {
         hw3::QueryProcessor::QueryResult qr = *it;
         stringstream ss;
-        ss << "<li><a href=\">";
+        ss << "<li><a href=\"";
         if (qr.document_name.substr(0, 7).compare("http://") != 0) {
           ss << "/static/";
         }

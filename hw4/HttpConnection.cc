@@ -50,7 +50,7 @@ bool HttpConnection::GetNextRequest(HttpRequest* const request) {
 
   // STEP 1:
   // If buffer_ does not contain "\r\n\r\n", read the request header
-  size_t pos = buffer_.find("\r\n\r\n");
+  size_t pos = buffer_.find(kHeaderEnd);
   if (pos == string::npos) {
     int bytes_read;
     unsigned char buf[BUF_SIZE];
@@ -63,7 +63,7 @@ bool HttpConnection::GetNextRequest(HttpRequest* const request) {
       } else {
         // Append the read bytes to buffer_
         buffer_ += string(reinterpret_cast<char*>(buf), bytes_read);
-        pos = buffer_.find("\r\n\r\n");
+        pos = buffer_.find(kHeaderEnd);
         if (pos != string::npos) {
           // There is occurrence of "\r\n\r\n"!
           break;
