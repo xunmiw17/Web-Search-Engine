@@ -54,6 +54,7 @@ bool IsPathSafe(const string& root_dir, const string& test_file) {
 
   // STEP 1
   char dir_buf[PATH_MAX], file_buf[PATH_MAX];
+  // Get the absolute paths of the given directory and file
   char *dir_path = realpath(root_dir.c_str(), dir_buf);
   if (dir_path == NULL) {
     return false;
@@ -62,9 +63,11 @@ bool IsPathSafe(const string& root_dir, const string& test_file) {
   if (file_path == NULL) {
     return false;
   }
+  // Check if the length of the directory path is smaller than that of the file
   if (strlen(dir_path) > strlen(file_path)) {
     return false;
   }
+  // Check if the file is under the directory
   if (strncmp(dir_path, file_path, strlen(dir_path)) != 0) {
     return false;
   }

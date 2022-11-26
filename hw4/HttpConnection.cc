@@ -65,7 +65,7 @@ bool HttpConnection::GetNextRequest(HttpRequest* const request) {
         buffer_ += string(reinterpret_cast<char*>(buf), bytes_read);
         pos = buffer_.find(kHeaderEnd);
         if (pos != string::npos) {
-          // There is occurrence of "\r\n\r\n"!
+          // There is occurrence of "\r\n\r\n"
           break;
         }
       }
