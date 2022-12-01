@@ -53,7 +53,8 @@ bool IsPathSafe(const string& root_dir, const string& test_file) {
   // path of a file.)
 
   // STEP 1
-  char dir_buf[PATH_MAX], file_buf[PATH_MAX];
+  char dir_buf[PATH_MAX];
+  char file_buf[PATH_MAX];
   // Get the absolute paths of the given directory and file
   char *dir_path = realpath(root_dir.c_str(), dir_buf);
   if (dir_path == NULL) {

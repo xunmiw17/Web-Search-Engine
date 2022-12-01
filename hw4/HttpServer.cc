@@ -309,26 +309,26 @@ static HttpResponse ProcessQueryRequest(const string& uri,
     boost::split(words, query, boost::is_any_of(" "), boost::token_compress_on);
 
     // Process the user's query and produces query results
-    hw3::QueryProcessor qp(indices);
+    hw3::QueryProcessor qp(indices, false);
     vector<hw3::QueryProcessor::QueryResult> qrs = qp.ProcessQuery(words);
 
     if (qrs.size() == 0) {
       // No result found
       ret.AppendToBody("<br>\n");
-      ret.AppendToBody("No results found for <b>");
+      ret.AppendToBody("<p>No results found for <b>");
       ret.AppendToBody(EscapeHtml(query));
-      ret.AppendToBody("</b>\n");
+      ret.AppendToBody("</b></p>\n");
     } else {
       // Display overview of search results
       stringstream ss_overview;
-      ss_overview << "<br>\n";
+      ss_overview << "<br><p>\n";
       ss_overview << qrs.size();
       if (qrs.size() == 1) {
         ss_overview << " result ";
       } else {
         ss_overview << " results ";
       }
-      ss_overview << "found for <b>" << EscapeHtml(query) << "</b>\n";
+      ss_overview << "found for <b>" << EscapeHtml(query) << "</b></p>\n";
       ret.AppendToBody(ss_overview.str());
 
       // Display details of search result, including document names and ranks
@@ -349,7 +349,6 @@ static HttpResponse ProcessQueryRequest(const string& uri,
     }
   }
 
-  // Write the end of body to response
   ret.AppendToBody("</body>\n");
   ret.AppendToBody("</html>\n");
 
